@@ -255,9 +255,14 @@ fig_municipio.update_layout(
 medicamentos = [fila[0] for fila in datos_top]
 costos = [fila[1] for fila in datos_top]
 
+medicamentos_cortos = [
+    medicamento if len(medicamento) <= 55
+    else medicamento[:52] + "..."
+    for medicamento in medicamentos
+]
 fig_top = px.bar(
     x=costos,
-    y=medicamentos,
+    y=medicamentos_cortos,
     orientation="h",
     labels={
         "x": "Costo total",
@@ -340,74 +345,6 @@ def actualizar_entrega(grupo, anio, mes, regional):
     costos = [fila[1] for fila in datos_entrega]
 
     figura = px.bar(
-        x=tipos,
-        y=costos,
-        labels={
-            "x": "Tipo de entrega",
-            "y": "Costo total"
-        },
-        title="Costo de medicamentos por tipo de entrega"
-    )
-
-    return figura
-
-@app.callback(
-    Output("grafico-top", "figure"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_top(grupo, anio, mes, regional):
-
-    conexion = sqlite3.connect("medicamentos.db")
-
-    condiciones = []
-    parametros = []
-
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
-
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
-
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
-
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
-
-    consulta_top = """
-    SELECT
-        descripcion,
-        SUM(costo_total) AS costo_total
-    FROM dispensacion
-    """
-
-    if condiciones:
-        consulta_top += " WHERE " + " AND ".join(condiciones)
-
-    consulta_top += """
-    GROUP BY descripcion
-    ORDER BY costo_total DESC
-    LIMIT 10;
-    """
-
-    datos_top = conexion.execute(
-        consulta_top,
-        parametros
-    ).fetchall()
-
-    conexion.close()
-
-    medicamentos = [fila[0] for fila in datos_top]
-    costos = [fila[1] for fila in datos_top]
-
-    figura = px.bar(
         x=costos,
         y=medicamentos,
         orientation="h",
@@ -419,8 +356,15 @@ def actualizar_top(grupo, anio, mes, regional):
     )
 
     figura.update_layout(
+        height=600,
+        margin=dict(l=20, r=40, t=80, b=60),
         yaxis=dict(
-            categoryorder="total ascending"
+            categoryorder="total ascending",
+            automargin=True
+        ),
+        xaxis=dict(
+            tickprefix="$ ",
+            ticksuffix=" M"
         )
     )
 
@@ -485,7 +429,6 @@ def actualizar_municipio(grupo, anio, mes, regional):
         for fila in datos_municipio
     ]
 
-    costos = [fila[1] for fila in datos_municipio]
 
     figura = px.bar(
         x=costos,
