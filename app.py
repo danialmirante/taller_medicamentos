@@ -1,988 +1,283 @@
+import os
 import sqlite3
-from dash import Dash, html, dcc, Input, Output
+from pathlib import Path
+
+import pandas as pd
 import plotly.express as px
+from dash import Dash, dcc, html, Input, Output
 
-# -----------------------------
-# CONEXIÓN A LA BASE DE DATOS
-# -----------------------------
-conexion = sqlite3.connect("medicamentos.db")
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = Path(os.getenv("DB_PATH", BASE_DIR / "medicamentos.db"))
 
-
-# -----------------------------
-# PERSONAS CON DISPENSACIONES
-# -----------------------------
-consulta_personas = """
-SELECT COUNT(DISTINCT id)
-FROM dispensacion;
-"""
-
-personas = conexion.execute(consulta_personas).fetchone()[0]
-
-
-# -----------------------------
-# FÓRMULAS DISTINTAS
-# -----------------------------
-consulta_formulas = """
-SELECT COUNT(DISTINCT formula)
-FROM dispensacion;
-"""
-
-formulas = conexion.execute(consulta_formulas).fetchone()[0]
-
-
-# -----------------------------
-# COSTO PROMEDIO POR FÓRMULA
-# -----------------------------
-consulta_costo = """
-SELECT AVG(costo_total)
-FROM (
-    SELECT
-        formula,
-        SUM(costo_total) AS costo_total
-    FROM dispensacion
-    GROUP BY formula
-);
-"""
-
-costo_promedio = conexion.execute(consulta_costo).fetchone()[0]
-# -----------------------------
-# DISPENSACIONES POR MES
-# -----------------------------
-consulta_tiempo = """
-SELECT
-    substr(fecha_entrega, 1, 7) AS mes,
-    COUNT(*) AS dispensaciones
-FROM dispensacion
-GROUP BY mes
-ORDER BY mes;
-"""
-
-datos_tiempo = conexion.execute(consulta_tiempo).fetchall()
-# Crear listas para la gráfica
-meses = [fila[0] for fila in datos_tiempo]
-dispensaciones = [fila[1] for fila in datos_tiempo]
-
-# Crear gráfica
-fig_tiempo = px.line(
-    x=meses,
-    y=dispensaciones,
-    markers=True,
-    labels={
-        "x": "Mes",
-        "y": "Número de dispensaciones"
-    },
-    title="Dispensaciones de medicamentos por mes"
-)
-# -----------------------------
-# TOP 10 MEDICAMENTOS POR COSTO
-# -----------------------------
-consulta_top = """
-SELECT
-    descripcion,
-    SUM(costo_total) AS costo_total
-FROM dispensacion
-GROUP BY descripcion
-ORDER BY costo_total DESC
-LIMIT 10;
-"""
-
-datos_top = conexion.execute(consulta_top).fetchall()
-
-medicamentos = [fila[0] for fila in datos_top]
-costos = [fila[1] for fila in datos_top]
-medicamentos_cortos = [
-    medicamento if len(medicamento) <= 50
-    else medicamento[:47] + "..."
-    for medicamento in medicamentos
-]
-
-fig_top = px.bar(
-    x=costos,
-    y=medicamentos_cortos,
-    orientation="h",
-    labels={
-        "x": "Costo total",
-        "y": "Medicamento"
-    },
-    title="Top 10 medicamentos por costo total"
-)
-
-fig_top.update_layout(
-    yaxis=dict(
-        categoryorder="total ascending"
-    )
-)
-
-# -----------------------------
-# COSTO POR PBS / NO PBS
-# -----------------------------
-consulta_pbs = """
-SELECT
-    pbs,
-    SUM(costo_total) AS costo_total
-FROM dispensacion
-GROUP BY pbs
-ORDER BY costo_total DESC;
-"""
-
-datos_pbs = conexion.execute(consulta_pbs).fetchall()
-pbs = [fila[0] for fila in datos_pbs]
-costos_pbs = [fila[1] for fila in datos_pbs]
-
-fig_pbs = px.bar(
-    x=pbs,
-    y=costos_pbs,
-    labels={
-        "x": "PBS",
-        "y": "Costo total"
-    },
-    title="Costo de medicamentos por PBS / No PBS"
-)
-
-import sqlite3
-
-conexion = sqlite3.connect("medicamentos.db")
-cursor = conexion.cursor()
-
-consulta = """
-SELECT
-    pbs,
-    COUNT(*) AS registros,
-    SUM(costo_total) AS costo_total
-FROM dispensacion
-GROUP BY pbs
-ORDER BY costo_total DESC;
-"""
-
-cursor.execute(consulta)
-resultados = cursor.fetchall()
-
-print("COSTO POR PBS / NO PBS")
-print("======================")
-
-for fila in resultados:
-    pbs = fila[0]
-    registros = fila[1]
-    costo = fila[2]
-
-    if pbs == "" or pbs is None:
-        pbs = "Sin dato"
-
-    print(
-        "PBS:", pbs,
-        "| Registros:", registros,
-        "| Costo total:", costo
-    )
-
-
-
-
-
-# -----------------------------
-# COSTO POR PBS / NO PBS
-# -----------------------------
-consulta_pbs = """
-SELECT
-    pbs,
-    SUM(costo_total) AS costo_total
-FROM dispensacion
-GROUP BY pbs
-ORDER BY costo_total DESC;
-"""
-
-datos_pbs = conexion.execute(consulta_pbs).fetchall()
-# -----------------------------
-# COSTO POR MUNICIPIO
-# -----------------------------
-consulta_municipio = """
-SELECT
-    municipio_caf,
-    SUM(costo_total) AS costo_total
-FROM dispensacion
-GROUP BY municipio_caf
-ORDER BY costo_total DESC
-LIMIT 15;
-"""
-
-datos_municipio = conexion.execute(consulta_municipio).fetchall()
-# -----------------------------
-# COSTO POR TIPO DE ENTREGA
-# -----------------------------
-consulta_entrega = """
-SELECT
-    tipo_entrega,
-    SUM(costo_total) AS costo_total
-FROM dispensacion
-GROUP BY tipo_entrega
-ORDER BY costo_total DESC;
-"""
-
-datos_entrega = conexion.execute(consulta_entrega).fetchall()
-tipos_entrega = [
-    "Sin dato" if fila[0] is None or fila[0] == "" else fila[0]
-    for fila in datos_entrega
-]
-
-costos_entrega = [fila[1] for fila in datos_entrega]
-
-fig_entrega = px.bar(
-    x=tipos_entrega,
-    y=costos_entrega,
-    labels={
-        "x": "Tipo de entrega",
-        "y": "Costo total"
-    },
-    title="Costo de medicamentos por tipo de entrega"
-)
-municipios = [
-    "Sin dato" if fila[0] == "0" or fila[0] is None or fila[0] == "" else fila[0]
-    for fila in datos_municipio
-]
-
-costos_municipio = [fila[1] for fila in datos_municipio]
-
-fig_municipio = px.bar(
-    x=costos_municipio,
-    y=municipios,
-    orientation="h",
-    labels={
-        "x": "Costo total",
-        "y": "Municipio"
-    },
-    title="Top 15 municipios por costo de medicamentos"
-)
-
-fig_municipio.update_layout(
-    yaxis=dict(
-        categoryorder="total ascending"
-    )
-)
-medicamentos = [fila[0] for fila in datos_top]
-costos = [fila[1] for fila in datos_top]
-
-medicamentos_cortos = [
-    medicamento if len(medicamento) <= 55
-    else medicamento[:52] + "..."
-    for medicamento in medicamentos
-]
-fig_top = px.bar(
-    x=costos,
-    y=medicamentos_cortos,
-    orientation="h",
-    labels={
-        "x": "Costo total",
-        "y": "Medicamento"
-    },
-    title="Top 10 medicamentos por costo total"
-)
-
-fig_top.update_layout(
-    yaxis=dict(
-        categoryorder="total ascending"
-    )
-)
-# Cerrar conexión
-conexion.close()
-
-
-# -----------------------------
-# CREAR APLICACIÓN DASH
-# -----------------------------
 app = Dash(__name__)
-
-@app.callback(
-    Output("grafico-entrega", "figure"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_entrega(grupo, anio, mes, regional):
-
-    conexion = sqlite3.connect("medicamentos.db")
-
-    condiciones = []
-    parametros = []
-
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
-
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
-
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
-
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
-
-    consulta_entrega = """
-    SELECT
-        tipo_entrega,
-        SUM(costo_total) AS costo_total
-    FROM dispensacion
-    """
-
-    if condiciones:
-        consulta_entrega += " WHERE " + " AND ".join(condiciones)
-
-    consulta_entrega += """
-    GROUP BY tipo_entrega
-    ORDER BY costo_total DESC;
-    """
-
-    datos_entrega = conexion.execute(
-        consulta_entrega,
-        parametros
-    ).fetchall()
-
-    conexion.close()
-
-    tipos = [
-        "Sin dato" if fila[0] is None or fila[0] == "" else fila[0]
-        for fila in datos_entrega
-    ]
-
-    costos = [fila[1] for fila in datos_entrega]
-
-    figura = px.bar(
-        x=costos,
-        y=medicamentos,
-        orientation="h",
-        labels={
-            "x": "Costo total",
-            "y": "Medicamento"
-        },
-        title="Top 10 medicamentos por costo total"
-    )
-
-    figura.update_layout(
-        height=600,
-        margin=dict(l=20, r=40, t=80, b=60),
-        yaxis=dict(
-            categoryorder="total ascending",
-            automargin=True
-        ),
-        xaxis=dict(
-            tickprefix="$ ",
-            ticksuffix=" M"
-        )
-    )
-
-    return figura
-
-@app.callback(
-    Output("grafico-municipio", "figure"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_municipio(grupo, anio, mes, regional):
-
-    conexion = sqlite3.connect("medicamentos.db")
-
-    condiciones = []
-    parametros = []
-
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
-
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
-
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
-
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
-
-    consulta_municipio = """
-    SELECT
-        municipio_caf,
-        SUM(costo_total) AS costo_total
-    FROM dispensacion
-    """
-
-    if condiciones:
-        consulta_municipio += " WHERE " + " AND ".join(condiciones)
-
-    consulta_municipio += """
-    GROUP BY municipio_caf
-    ORDER BY costo_total DESC
-    LIMIT 15;
-    """
-
-    datos_municipio = conexion.execute(
-        consulta_municipio,
-        parametros
-    ).fetchall()
-
-    conexion.close()
-
-    municipios = [
-        "Sin dato" if fila[0] is None or fila[0] == "" or fila[0] == "0"
-        else fila[0]
-        for fila in datos_municipio
-    ]
+server = app.server
+app.title = "Tablero de medicamentos EPS"
 
 
-    figura = px.bar(
-        x=costos,
-        y=municipios,
-        orientation="h",
-        labels={
-            "x": "Costo total",
-            "y": "Municipio"
-        },
-        title="Top 15 municipios por costo de medicamentos"
-    )
+def get_connection():
+    return sqlite3.connect(DB_PATH)
 
-    figura.update_layout(
-        yaxis=dict(
-            categoryorder="total ascending"
-        )
-    )
 
-    return figura
+def sql_df(query, params=None):
+    with get_connection() as con:
+        return pd.read_sql_query(query, con, params=params or [])
 
-@app.callback(
-    Output("grafico-pbs", "figure"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_pbs(grupo, anio, mes, regional):
 
-    conexion = sqlite3.connect("medicamentos.db")
+def filter_clause(year, month, regional, group):
+    clauses = []
+    params = []
 
-    condiciones = []
-    parametros = []
+    if year and year != "Todos":
+        clauses.append("strftime('%Y', fecha_entrega) = ?")
+        params.append(str(year))
 
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
+    if month and month != "Todos":
+        clauses.append("strftime('%m', fecha_entrega) = ?")
+        params.append(f"{int(month):02d}")
 
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
+    if regional and regional != "Todos":
+        clauses.append("regional_caf = ?")
+        params.append(regional)
 
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
+    if group and group != "Todos":
+        clauses.append("grupo_fco_economico = ?")
+        params.append(group)
 
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
+    where = " WHERE " + " AND ".join(clauses) if clauses else ""
+    return where, params
 
-    consulta_pbs = """
-    SELECT
-        pbs,
-        SUM(costo_total) AS costo_total
-    FROM dispensacion
-    """
 
-    if condiciones:
-        consulta_pbs += " WHERE " + " AND ".join(condiciones)
+def options(query):
+    df = sql_df(query)
+    return [{"label": str(v), "value": v} for v in df.iloc[:, 0].dropna().tolist()]
 
-    consulta_pbs += """
-    GROUP BY pbs
-    ORDER BY costo_total DESC;
-    """
 
-    datos_pbs = conexion.execute(
-        consulta_pbs,
-        parametros
-    ).fetchall()
+years = options("SELECT DISTINCT strftime('%Y', fecha_entrega) AS year FROM dispensacion ORDER BY year")
+months = [{"label": "Enero", "value": 1}, {"label": "Febrero", "value": 2},
+          {"label": "Marzo", "value": 3}, {"label": "Abril", "value": 4},
+          {"label": "Mayo", "value": 5}, {"label": "Junio", "value": 6},
+          {"label": "Julio", "value": 7}, {"label": "Agosto", "value": 8},
+          {"label": "Septiembre", "value": 9}, {"label": "Octubre", "value": 10},
+          {"label": "Noviembre", "value": 11}, {"label": "Diciembre", "value": 12}]
+regionals = options("SELECT DISTINCT regional_caf FROM dispensacion WHERE TRIM(regional_caf) <> '' ORDER BY regional_caf")
+groups = options("SELECT DISTINCT grupo_fco_economico FROM dispensacion WHERE TRIM(grupo_fco_economico) <> '' ORDER BY grupo_fco_economico")
 
-    conexion.close()
 
-    categorias = [
-        "Sin dato" if fila[0] is None or fila[0] == "" else fila[0]
-        for fila in datos_pbs
-    ]
+def money(v):
+    return f"${v:,.0f}".replace(",", ".")
 
-    costos = [fila[1] for fila in datos_pbs]
 
-    figura = px.bar(
-        x=categorias,
-        y=costos,
-        labels={
-            "x": "PBS",
-            "y": "Costo total"
-        },
-        title="Costo de medicamentos por PBS / No PBS"
-    )
+def card(title, value, subtitle=""):
+    return html.Div([
+        html.Div(title, className="card-title"),
+        html.Div(value, className="card-value"),
+        html.Div(subtitle, className="card-subtitle")
+    ], className="kpi-card")
 
-    return figura
-# -----------------------------
-# DISEÑO DEL DASHBOARD
-# -----------------------------
+
 app.layout = html.Div([
-
-    # BARRA LATERAL
     html.Div([
+        html.H1("Tablero de medicamentos dispensados"),
+        html.P("EPS | Dispensaciones 2020–2021 | Fuente: SQLite"),
+    ], className="header"),
 
-        html.H2(
-            "Filtros",
-            style={
-                "textAlign": "center",
-                "marginBottom": "25px"
-            }
-        ),
-
-        html.Label("Año de dispensación"),
-        dcc.Dropdown(
-            id="filtro-anio",
-            options=[
-                {"label": "Todos", "value": "TODOS"},
-                {"label": "2020", "value": "2020"},
-                {"label": "2021", "value": "2021"}
-            ],
-            value="TODOS",
-            clearable=False
-        ),
-
-        html.Br(),
-
-        html.Label("Mes de dispensación"),
-        dcc.Dropdown(
-            id="filtro-mes",
-            options=[
-                {"label": "Todos", "value": "TODOS"},
-                {"label": "Enero", "value": "01"},
-                {"label": "Febrero", "value": "02"},
-                {"label": "Marzo", "value": "03"},
-                {"label": "Abril", "value": "04"},
-                {"label": "Mayo", "value": "05"},
-                {"label": "Junio", "value": "06"},
-                {"label": "Julio", "value": "07"},
-                {"label": "Agosto", "value": "08"},
-                {"label": "Septiembre", "value": "09"},
-                {"label": "Octubre", "value": "10"},
-                {"label": "Noviembre", "value": "11"},
-                {"label": "Diciembre", "value": "12"}
-            ],
-            value="TODOS",
-            clearable=False
-        ),
-
-        html.Br(),
-
-        html.Label("CAF regional"),
-        dcc.Dropdown(
-            id="filtro-regional",
-            options=[
-                {"label": "Todos", "value": "TODOS"},
-                {"label": "CARTAGENA", "value": "CARTAGENA"},
-                {"label": "BOLIVAR NORTE", "value": "BOLIVAR NORTE"},
-                {"label": "BOLIVAR CENTRO", "value": "BOLIVAR CENTRO"},
-                {"label": "BOLIVAR SUR", "value": "BOLIVAR SUR"},
-                {"label": "ATLANTICO", "value": "ATLANTICO"},
-                {"label": "CORDOBA", "value": "CORDOBA"},
-                {"label": "SUCRE", "value": "SUCRE"},
-                {"label": "MAGDALENA", "value": "MAGDALENA"},
-                {"label": "BOGOTA", "value": "BOGOTA"},
-                {"label": "Sin dato", "value": "0"}
-            ],
-            value="TODOS",
-            clearable=False
-        ),
-
-        html.Br(),
-
-        html.Label("Grupo farmacológico"),
-        dcc.Dropdown(
-            id="filtro-grupo",
-            options=[
-                {"label": "Todos", "value": "TODOS"},
-                {"label": "ANTIDIABETICOS", "value": "ANTIDIABETICOS"},
-                {"label": "ANTIHIPERTENSIVOS", "value": "ANTIHIPERTENSIVOS"},
-                {"label": "ANALGESICOS Y ANTIINFLAMATORIOS", "value": "ANALGESICOS Y ANTIINFLAMATORIOS"},
-                {"label": "VITAMINAS", "value": "VITAMINAS"},
-                {"label": "HIPOLIPEMIANTES", "value": "HIPOLIPEMIANTES"}
-            ],
-            value="TODOS",
-            clearable=False
-        )
-
-    ], style={
-        "width": "260px",
-        "padding": "25px",
-        "backgroundColor": "#f4f6f8",
-        "minHeight": "100vh",
-        "boxSizing": "border-box"
-    }),
-
-    # PANEL PRINCIPAL
     html.Div([
+        html.Div([html.Label("Año"), dcc.Dropdown(
+            [{"label": "Todos", "value": "Todos"}] + years,
+            "Todos", id="year-filter", clearable=False
+        )], className="filter"),
+        html.Div([html.Label("Mes"), dcc.Dropdown(
+            [{"label": "Todos", "value": "Todos"}] + months,
+            "Todos", id="month-filter", clearable=False
+        )], className="filter"),
+        html.Div([html.Label("Regional CAF"), dcc.Dropdown(
+            [{"label": "Todos", "value": "Todos"}] + regionals,
+            "Todos", id="regional-filter", clearable=False
+        )], className="filter"),
+        html.Div([html.Label("Grupo farmacológico"), dcc.Dropdown(
+            [{"label": "Todos", "value": "Todos"}] + groups,
+            "Todos", id="group-filter", clearable=False
+        )], className="filter"),
+    ], className="filters"),
 
-        html.H1(
-            "Dashboard de Medicamentos",
-            style={
-                "textAlign": "center",
-                "marginBottom": "5px"
-            }
-        ),
+    html.Div(id="kpis", className="kpis"),
 
-        html.P(
-            "Análisis de dispensación 2020 - 2021",
-            style={
-                "textAlign": "center",
-                "color": "#666",
-                "marginBottom": "25px"
-            }
-        ),
+    html.Div([
+        html.Div([dcc.Graph(id="time-chart")], className="panel wide"),
+        html.Div([dcc.Graph(id="pbs-chart")], className="panel"),
+    ], className="grid"),
 
-        # INDICADORES
+    html.Div([
+        html.Div([dcc.Graph(id="top-med-chart")], className="panel"),
+        html.Div([dcc.Graph(id="delivery-chart")], className="panel"),
+    ], className="grid"),
+
+    html.Div([
+        html.Div([dcc.Graph(id="municipality-chart")], className="panel wide"),
+    ], className="grid"),
+
+    html.Div([
+        html.H2("Análisis específico: ANTIDIABÉTICOS"),
+        html.Div(id="anti-summary", className="anti-summary"),
+        html.Div([dcc.Graph(id="anti-time-chart")], className="panel"),
+        html.Div([dcc.Graph(id="anti-top-chart")], className="panel"),
+    ], className="anti-section"),
+
+    html.Div([
+        html.Hr(),
+        html.P("Nota metodológica: el costo promedio de una fórmula se calcula como costo total / número de fórmulas distintas."),
+        html.P("El campo municipio_caf se utiliza para el desglose geográfico solicitado; regional_caf se usa como filtro."),
+    ], className="footer")
+])
+
+
+@app.callback(
+    Output("kpis", "children"),
+    Output("time-chart", "figure"),
+    Output("pbs-chart", "figure"),
+    Output("top-med-chart", "figure"),
+    Output("delivery-chart", "figure"),
+    Output("municipality-chart", "figure"),
+    Output("anti-summary", "children"),
+    Output("anti-time-chart", "figure"),
+    Output("anti-top-chart", "figure"),
+    Input("year-filter", "value"),
+    Input("month-filter", "value"),
+    Input("regional-filter", "value"),
+    Input("group-filter", "value"),
+)
+def update_dashboard(year, month, regional, group):
+    where, params = filter_clause(year, month, regional, group)
+
+    kpi = sql_df(f"""
+        SELECT
+            COUNT(DISTINCT id) AS personas,
+            COUNT(DISTINCT formula) AS formulas,
+            COALESCE(SUM(costo_total),0) AS costo_total
+        FROM dispensacion {where}
+    """, params).iloc[0]
+
+    avg_formula = (kpi["costo_total"] / kpi["formulas"]) if kpi["formulas"] else 0
+    kpis = [
+        card("Personas con dispensaciones", f'{int(kpi["personas"]):,}'.replace(",", ".")),
+        card("Fórmulas distintas", f'{int(kpi["formulas"]):,}'.replace(",", ".")),
+        card("Costo total", money(kpi["costo_total"])),
+        card("Costo promedio por fórmula", money(avg_formula)),
+    ]
+
+    time_df = sql_df(f"""
+        SELECT strftime('%Y-%m', fecha_entrega) AS periodo,
+               SUM(costo_total) AS costo,
+               COUNT(*) AS dispensaciones
+        FROM dispensacion {where}
+        GROUP BY periodo ORDER BY periodo
+    """, params)
+    fig_time = px.line(time_df, x="periodo", y="costo", markers=True,
+                       title="Costo de medicamentos en el tiempo",
+                       labels={"periodo":"Mes", "costo":"Costo total"})
+    fig_time.update_layout(yaxis_tickprefix="$", hovermode="x unified")
+
+    pbs_df = sql_df(f"""
+        SELECT COALESCE(NULLIF(TRIM(pbs),''),'Sin dato') AS pbs,
+               SUM(costo_total) AS costo
+        FROM dispensacion {where}
+        GROUP BY 1 ORDER BY costo DESC
+    """, params)
+    fig_pbs = px.bar(pbs_df, x="pbs", y="costo", title="Costo según PBS / No PBS",
+                     labels={"pbs":"PBS", "costo":"Costo total"}, text_auto=".3s")
+    fig_pbs.update_layout(yaxis_tickprefix="$")
+
+    top_df = sql_df(f"""
+        SELECT descripcion AS medicamento, SUM(costo_total) AS costo
+        FROM dispensacion {where}
+        GROUP BY descripcion
+        ORDER BY costo DESC LIMIT 10
+    """, params).sort_values("costo")
+    fig_top = px.bar(top_df, x="costo", y="medicamento", orientation="h",
+                     title="Top 10 medicamentos por costo total",
+                     labels={"costo":"Costo total", "medicamento":"Medicamento"})
+    fig_top.update_layout(xaxis_tickprefix="$")
+
+    delivery_df = sql_df(f"""
+        SELECT COALESCE(NULLIF(TRIM(tipo_entrega),''),'Sin dato') AS tipo_entrega,
+               SUM(costo_total) AS costo
+        FROM dispensacion {where}
+        GROUP BY 1 ORDER BY costo DESC
+    """, params)
+    fig_delivery = px.bar(delivery_df, x="tipo_entrega", y="costo",
+                          title="Costo según tipo de entrega",
+                          labels={"tipo_entrega":"Tipo de entrega","costo":"Costo total"})
+    fig_delivery.update_layout(yaxis_tickprefix="$")
+
+    mun_df = sql_df(f"""
+        SELECT COALESCE(NULLIF(TRIM(municipio_caf),''),'Sin dato') AS municipio_caf,
+               SUM(costo_total) AS costo
+        FROM dispensacion {where}
+        GROUP BY 1 ORDER BY costo DESC LIMIT 15
+    """, params)
+    fig_mun = px.bar(mun_df.sort_values("costo"), x="costo", y="municipio_caf",
+                     orientation="h", title="Costo por municipio CAF (Top 15)",
+                     labels={"municipio_caf":"Municipio CAF","costo":"Costo total"})
+    fig_mun.update_layout(xaxis_tickprefix="$")
+
+    # ANTIDIABÉTICOS: se analiza aparte de los filtros generales para que el bloque
+    # responda siempre a la pregunta específica del taller.
+    anti = sql_df("""
+        SELECT
+            COUNT(*) AS dispensaciones,
+            COUNT(DISTINCT id) AS personas,
+            COUNT(DISTINCT formula) AS formulas,
+            SUM(costo_total) AS costo
+        FROM dispensacion
+        WHERE grupo_fco_economico = 'ANTIDIABETICOS'
+    """).iloc[0]
+    anti_avg = anti["costo"] / anti["formulas"] if anti["formulas"] else 0
+
+    anti_top = sql_df("""
+        SELECT descripcion AS medicamento, SUM(costo_total) AS costo
+        FROM dispensacion
+        WHERE grupo_fco_economico = 'ANTIDIABETICOS'
+        GROUP BY descripcion ORDER BY costo DESC LIMIT 10
+    """).sort_values("costo")
+    anti_time = sql_df("""
+        SELECT strftime('%Y-%m', fecha_entrega) AS periodo,
+               SUM(costo_total) AS costo,
+               COUNT(DISTINCT formula) AS formulas
+        FROM dispensacion
+        WHERE grupo_fco_economico = 'ANTIDIABETICOS'
+        GROUP BY periodo ORDER BY periodo
+    """)
+    anti_first = anti_time.iloc[0]["costo"] if len(anti_time) else 0
+    anti_last = anti_time.iloc[-1]["costo"] if len(anti_time) else 0
+    trend_text = "aumentó" if anti_last > anti_first else "disminuyó o no aumentó"
+    anti_summary = [
+        card("Costo total ANTIDIABÉTICOS", money(anti["costo"])),
+        card("Fórmulas distintas", f'{int(anti["formulas"]):,}'.replace(",", ".")),
+        card("Costo promedio por fórmula", money(anti_avg)),
         html.Div([
-
-            html.Div([
-                html.H4("Personas con dispensaciones"),
-                html.H2(
-                    f"{personas:,}",
-                    id="indicador-personas"
-                )
-            ], style={
-                "flex": "1",
-                "padding": "20px",
-                "margin": "5px",
-                "textAlign": "center",
-                "backgroundColor": "#f4f6f8",
-                "borderRadius": "10px"
-            }),
-
-            html.Div([
-                html.H4("Fórmulas distintas"),
-                html.H2(
-                    f"{formulas:,}",
-                    id="indicador-formulas"
-                )
-            ], style={
-                "flex": "1",
-                "padding": "20px",
-                "margin": "5px",
-                "textAlign": "center",
-                "backgroundColor": "#f4f6f8",
-                "borderRadius": "10px"
-            }),
-
-            html.Div([
-                html.H4("Costo promedio por fórmula"),
-                html.H2(
-                    f"${costo_promedio:,.2f}",
-                    id="indicador-costo"
-                )
-            ], style={
-                "flex": "1",
-                "padding": "20px",
-                "margin": "5px",
-                "textAlign": "center",
-                "backgroundColor": "#f4f6f8",
-                "borderRadius": "10px"
-            })
-
-        ], style={
-            "display": "flex",
-            "marginBottom": "20px"
-        }),
-
-        # GRÁFICO DE TIEMPO
-        dcc.Graph(
-            id="grafico-tiempo",
-            figure=fig_tiempo
-        ),
-
-        # FILA DE GRÁFICOS
-        html.Div([
-
-            html.Div([
-                dcc.Graph(
-                    id="grafico-top",
-                    figure=fig_top
-                )
-            ], style={
-                "width": "50%"
-            }),
-
-            html.Div([
-                dcc.Graph(
-                    id="grafico-pbs",
-                    figure=fig_pbs
-                )
-            ], style={
-                "width": "50%"
-            })
-
-        ], style={
-            "display": "flex"
-        }),
-
-        # SEGUNDA FILA
-        html.Div([
-
-            html.Div([
-                dcc.Graph(
-                    id="grafico-municipio",
-                    figure=fig_municipio
-                )
-            ], style={
-                "width": "50%"
-            }),
-
-            html.Div([
-                dcc.Graph(
-                    id="grafico-entrega",
-                    figure=fig_entrega
-                )
-            ], style={
-                "width": "50%"
-            })
-
-        ], style={
-            "display": "flex"
-        })
-
-    ], style={
-        "flex": "1",
-        "padding": "25px",
-        "boxSizing": "border-box"
-    })
-
-], style={
-    "display": "flex",
-    "fontFamily": "Arial, sans-serif"
-})
-
-conexion.close()
-# -----------------------------
-# EJECUTAR APLICACIÓN
-# -----------------------------
-@app.callback(
-    Output("indicador-formulas", "children"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_formulas(grupo, anio, mes, regional):
-
-    conexion = sqlite3.connect("medicamentos.db")
-
-    condiciones = []
-    parametros = []
-
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
-
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
-
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
-
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
-
-    consulta = """
-    SELECT COUNT(DISTINCT formula)
-    FROM dispensacion
-    """
-
-    if condiciones:
-        consulta += " WHERE " + " AND ".join(condiciones)
-
-    formulas_filtradas = conexion.execute(
-        consulta,
-        parametros
-    ).fetchone()[0]
-
-    conexion.close()
-
-    return f"{formulas_filtradas:,}"
-
-
-@app.callback(
-    Output("indicador-costo", "children"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_costo(grupo, anio, mes, regional):
-
-    conexion = sqlite3.connect("medicamentos.db")
-
-    condiciones = []
-    parametros = []
-
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
-
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
-
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
-
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
-
-    consulta = """
-    SELECT
-        SUM(costo_total) / COUNT(DISTINCT formula)
-    FROM dispensacion
-    """
-
-    if condiciones:
-        consulta += " WHERE " + " AND ".join(condiciones)
-
-    costo_filtrado = conexion.execute(
-        consulta,
-        parametros
-    ).fetchone()[0]
-
-    conexion.close()
-
-    return f"${costo_filtrado:,.2f}"
-@app.callback(
-    Output("indicador-personas", "children"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_personas(grupo, anio, mes, regional):
-
-    conexion = sqlite3.connect("medicamentos.db")
-
-    condiciones = []
-    parametros = []
-
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
-
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
-
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
-
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
-
-    consulta = """
-    SELECT COUNT(DISTINCT id)
-    FROM dispensacion
-    """
-
-    if condiciones:
-        consulta += " WHERE " + " AND ".join(condiciones)
-
-    personas_filtradas = conexion.execute(
-        consulta,
-        parametros
-    ).fetchone()[0]
-
-    conexion.close()
-
-    return f"{personas_filtradas:,}"
-
-@app.callback(
-    Output("grafico-tiempo", "figure"),
-    Input("filtro-grupo", "value"),
-    Input("filtro-anio", "value"),
-    Input("filtro-mes", "value"),
-    Input("filtro-regional", "value")
-)
-def actualizar_tiempo(grupo, anio, mes, regional):
-
-    conexion = sqlite3.connect("medicamentos.db")
-
-    condiciones = []
-    parametros = []
-
-    if grupo != "TODOS":
-        condiciones.append("grupo_fco_economico = ?")
-        parametros.append(grupo)
-
-    if anio != "TODOS":
-        condiciones.append("strftime('%Y', fecha_entrega) = ?")
-        parametros.append(anio)
-
-    if mes != "TODOS":
-        condiciones.append("strftime('%m', fecha_entrega) = ?")
-        parametros.append(mes)
-
-    if regional != "TODOS":
-        condiciones.append("regional_caf = ?")
-        parametros.append(regional)
-
-    consulta = """
-    SELECT
-        substr(fecha_entrega, 1, 7) AS mes,
-        COUNT(*) AS dispensaciones
-    FROM dispensacion
-    """
-
-    if condiciones:
-        consulta += " WHERE " + " AND ".join(condiciones)
-
-    consulta += """
-    GROUP BY substr(fecha_entrega, 1, 7)
-    ORDER BY mes;
-    """
-
-    datos = conexion.execute(
-        consulta,
-        parametros
-    ).fetchall()
-
-    conexion.close()
-
-    meses = [fila[0] for fila in datos]
-    dispensaciones = [fila[1] for fila in datos]
-
-    figura = px.line(
-        x=meses,
-        y=dispensaciones,
-        markers=True,
-        labels={
-            "x": "Mes",
-            "y": "Número de dispensaciones"
-        },
-        title="Dispensación de medicamentos en el tiempo"
-    )
-
-    figura.update_xaxes(
-        type="category",
-        tickangle=45
-    )
-
-    return figura
+            html.B("Lectura temporal: "),
+            html.Span(
+                f"el costo mensual {trend_text} entre {anti_time.iloc[0]['periodo']} "
+                f"y {anti_time.iloc[-1]['periodo']}; el grupo no tiene registros en 2020."
+                if len(anti_time) else "No hay registros."
+            )
+        ], className="anti-note")
+    ]
+
+    fig_anti_time = px.line(anti_time, x="periodo", y="costo", markers=True,
+                            title="ANTIDIABÉTICOS: costo mensual",
+                            labels={"periodo":"Mes","costo":"Costo total"})
+    fig_anti_time.update_layout(yaxis_tickprefix="$")
+
+    fig_anti_top = px.bar(anti_top, x="costo", y="medicamento", orientation="h",
+                          title="ANTIDIABÉTICOS: medicamentos con mayor costo total",
+                          labels={"costo":"Costo total","medicamento":"Medicamento"})
+    fig_anti_top.update_layout(xaxis_tickprefix="$")
+
+    return kpis, fig_time, fig_pbs, fig_top, fig_delivery, fig_mun, anti_summary, fig_anti_time, fig_anti_top
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8050)), debug=False)
+
 

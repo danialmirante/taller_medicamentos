@@ -1,52 +1,82 @@
 body {
-	font-family: Arial, sans-serif;
-	background-color: #f5f7fa;
-	margin: 0;
-	padding: 20px;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    color: #1f2937;
+}
+.header {
+    padding: 28px 36px;
+    background: #17324d;
+    color: white;
+}
+.header h1 { margin: 0 0 6px 0; }
+.header p { margin: 0; opacity: .9; }
+.filters {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    padding: 20px 36px 10px;
+    background: white;
+}
+.filter label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    padding: 15px 36px;
+}
+.kpi-card {
+    background: white;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 1px 5px rgba(0,0,0,.08);
+}
+.card-title { font-size: 14px; color: #667085; }
+.card-value { font-size: 25px; font-weight: 700; margin-top: 6px; }
+.card-subtitle { font-size: 12px; color: #98a2b3; margin-top: 4px; }
+.grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    padding: 0 36px 16px;
+}
+.panel {
+    background: white;
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 1px 5px rgba(0,0,0,.08);
+}
+.wide { min-width: 0; }
+.anti-section {
+    margin: 10px 36px 30px;
+    padding: 20px;
+    background: #eef6f4;
+    border-radius: 12px;
+}
+.anti-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.anti-note {
+    grid-column: 1 / -1;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+}
+.footer {
+    padding: 0 36px 30px;
+    color: #667085;
+}
+@media (max-width: 900px) {
+    .filters, .kpis, .grid, .anti-summary { grid-template-columns: 1fr; }
+    .header, .filters, .kpis { padding-left: 18px; padding-right: 18px; }
+    .grid { padding-left: 18px; padding-right: 18px; }
+    .anti-section { margin-left: 18px; margin-right: 18px; }
 }
 
-h1 {
-	color: #1f3c88;
-	font-size: 36px;
-	margin-bottom: 10px;
-}
-
-h3 {
-	color: #333;
-	margin-bottom: 8px;
-}
-
-hr {
-	border: 0;
-	border-top: 1px solid #ddd;
-	margin: 20px 0;
-}
-
-/* Filtros */
-.Select-control {
-	border-radius: 8px !important;
-	min-height: 45px;
-}
-
-.dash-dropdown {
-	margin-bottom: 20px;
-}
-
-/* Indicadores */
-#indicador-personas,
-#indicador-formulas,
-#indicador-costo {
-	color: #1f3c88;
-	font-size: 30px;
-	font-weight: bold;
-}
-
-/* Gráficos */
-.js-plotly-plot {
-	background-color: white;
-	border-radius: 12px;
-	padding: 10px;
-	margin-top: 20px;
-	margin-bottom: 25px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
