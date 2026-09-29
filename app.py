@@ -90,10 +90,15 @@ datos_top = conexion.execute(consulta_top).fetchall()
 
 medicamentos = [fila[0] for fila in datos_top]
 costos = [fila[1] for fila in datos_top]
+medicamentos_cortos = [
+    medicamento if len(medicamento) <= 50
+    else medicamento[:47] + "..."
+    for medicamento in medicamentos
+]
 
 fig_top = px.bar(
     x=costos,
-    y=medicamentos,
+    y=medicamentos_cortos,
     orientation="h",
     labels={
         "x": "Costo total",
@@ -524,147 +529,240 @@ def actualizar_pbs(grupo, anio, mes, regional):
 # -----------------------------
 app.layout = html.Div([
 
-    html.H1("Dashboard de Medicamentos"),
-
-    html.Hr(),
-
-    html.H3("Año de dispensación"),
-
-dcc.Dropdown(
-    id="filtro-anio",
-    options=[
-        {"label": "Todos", "value": "TODOS"},
-        {"label": "2020", "value": "2020"},
-        {"label": "2021", "value": "2021"}
-    ],
-    value="TODOS",
-    clearable=False
-),
-
-html.H3("Mes de dispensación"),
-
-dcc.Dropdown(
-    id="filtro-mes",
-    options=[
-        {"label": "Todos", "value": "TODOS"},
-        {"label": "Enero", "value": "01"},
-        {"label": "Febrero", "value": "02"},
-        {"label": "Marzo", "value": "03"},
-        {"label": "Abril", "value": "04"},
-        {"label": "Mayo", "value": "05"},
-        {"label": "Junio", "value": "06"},
-        {"label": "Julio", "value": "07"},
-        {"label": "Agosto", "value": "08"},
-        {"label": "Septiembre", "value": "09"},
-        {"label": "Octubre", "value": "10"},
-        {"label": "Noviembre", "value": "11"},
-        {"label": "Diciembre", "value": "12"}
-    ],
-    value="TODOS",
-    clearable=False
-),
-
-html.H3("CAF regional"),
-
-dcc.Dropdown(
-    id="filtro-regional",
-    options=[
-        {"label": "Todos", "value": "TODOS"},
-        {"label": "CARTAGENA", "value": "CARTAGENA"},
-        {"label": "BOLIVAR NORTE", "value": "BOLIVAR NORTE"},
-        {"label": "BOLIVAR CENTRO", "value": "BOLIVAR CENTRO"},
-        {"label": "BOLIVAR SUR", "value": "BOLIVAR SUR"},
-        {"label": "ATLANTICO", "value": "ATLANTICO"},
-        {"label": "CORDOBA", "value": "CORDOBA"},
-        {"label": "SUCRE", "value": "SUCRE"},
-        {"label": "MAGDALENA", "value": "MAGDALENA"},
-        {"label": "BOGOTA", "value": "BOGOTA"},
-        {"label": "Sin dato", "value": "0"}
-    ],
-    value="TODOS",
-    clearable=False
-),
-
-html.H3("Grupo farmacológico"),
-
-dcc.Dropdown(
-    id="filtro-grupo",
-    options=[
-        {"label": "Todos", "value": "TODOS"},
-        {"label": "ANTIDIABETICOS", "value": "ANTIDIABETICOS"},
-        {"label": "ANTIHIPERTENSIVOS", "value": "ANTIHIPERTENSIVOS"},
-        {"label": "ANALGESICOS Y ANTIINFLAMATORIOS", "value": "ANALGESICOS Y ANTIINFLAMATORIOS"},
-        {"label": "VITAMINAS", "value": "VITAMINAS"},
-        {"label": "HIPOLIPEMIANTES", "value": "HIPOLIPEMIANTES"}
-    ],
-    value="TODOS",
-    clearable=False
-),
-
-    html.H1("Dashboard de Medicamentos"),
-
-    html.Hr(),
-
+    # BARRA LATERAL
     html.Div([
-    html.H3("Personas con dispensaciones"),
-    html.H2(
-        f"{personas:,}",
-        id="indicador-personas"
-    )
-]),
 
-html.Hr(),
+        html.H2(
+            "Filtros",
+            style={
+                "textAlign": "center",
+                "marginBottom": "25px"
+            }
+        ),
 
-html.Div([
-    html.H3("Fórmulas distintas"),
-    html.H2(
-        f"{formulas:,}",
-        id="indicador-formulas"
-    )
-]),
+        html.Label("Año de dispensación"),
+        dcc.Dropdown(
+            id="filtro-anio",
+            options=[
+                {"label": "Todos", "value": "TODOS"},
+                {"label": "2020", "value": "2020"},
+                {"label": "2021", "value": "2021"}
+            ],
+            value="TODOS",
+            clearable=False
+        ),
 
-html.Hr(),
+        html.Br(),
 
-html.Div([
+        html.Label("Mes de dispensación"),
+        dcc.Dropdown(
+            id="filtro-mes",
+            options=[
+                {"label": "Todos", "value": "TODOS"},
+                {"label": "Enero", "value": "01"},
+                {"label": "Febrero", "value": "02"},
+                {"label": "Marzo", "value": "03"},
+                {"label": "Abril", "value": "04"},
+                {"label": "Mayo", "value": "05"},
+                {"label": "Junio", "value": "06"},
+                {"label": "Julio", "value": "07"},
+                {"label": "Agosto", "value": "08"},
+                {"label": "Septiembre", "value": "09"},
+                {"label": "Octubre", "value": "10"},
+                {"label": "Noviembre", "value": "11"},
+                {"label": "Diciembre", "value": "12"}
+            ],
+            value="TODOS",
+            clearable=False
+        ),
 
-    html.H3("Costo promedio por fórmula"),
+        html.Br(),
 
-    html.H2(
-        f"${costo_promedio:,.2f}",
-        id="indicador-costo"
-    )
+        html.Label("CAF regional"),
+        dcc.Dropdown(
+            id="filtro-regional",
+            options=[
+                {"label": "Todos", "value": "TODOS"},
+                {"label": "CARTAGENA", "value": "CARTAGENA"},
+                {"label": "BOLIVAR NORTE", "value": "BOLIVAR NORTE"},
+                {"label": "BOLIVAR CENTRO", "value": "BOLIVAR CENTRO"},
+                {"label": "BOLIVAR SUR", "value": "BOLIVAR SUR"},
+                {"label": "ATLANTICO", "value": "ATLANTICO"},
+                {"label": "CORDOBA", "value": "CORDOBA"},
+                {"label": "SUCRE", "value": "SUCRE"},
+                {"label": "MAGDALENA", "value": "MAGDALENA"},
+                {"label": "BOGOTA", "value": "BOGOTA"},
+                {"label": "Sin dato", "value": "0"}
+            ],
+            value="TODOS",
+            clearable=False
+        ),
 
-]),
+        html.Br(),
 
-    html.Hr(),
+        html.Label("Grupo farmacológico"),
+        dcc.Dropdown(
+            id="filtro-grupo",
+            options=[
+                {"label": "Todos", "value": "TODOS"},
+                {"label": "ANTIDIABETICOS", "value": "ANTIDIABETICOS"},
+                {"label": "ANTIHIPERTENSIVOS", "value": "ANTIHIPERTENSIVOS"},
+                {"label": "ANALGESICOS Y ANTIINFLAMATORIOS", "value": "ANALGESICOS Y ANTIINFLAMATORIOS"},
+                {"label": "VITAMINAS", "value": "VITAMINAS"},
+                {"label": "HIPOLIPEMIANTES", "value": "HIPOLIPEMIANTES"}
+            ],
+            value="TODOS",
+            clearable=False
+        )
 
-   dcc.Graph(
-    id="grafico-tiempo",
-    figure=fig_tiempo
-),
+    ], style={
+        "width": "260px",
+        "padding": "25px",
+        "backgroundColor": "#f4f6f8",
+        "minHeight": "100vh",
+        "boxSizing": "border-box"
+    }),
 
-    dcc.Graph(
-    id="grafico-top",
-    figure=fig_top
-),
+    # PANEL PRINCIPAL
+    html.Div([
 
-    dcc.Graph(
-    id="grafico-pbs",
-    figure=fig_pbs
-),
+        html.H1(
+            "Dashboard de Medicamentos",
+            style={
+                "textAlign": "center",
+                "marginBottom": "5px"
+            }
+        ),
 
-    dcc.Graph(
-    id="grafico-municipio",
-    figure=fig_municipio
-),
-    
+        html.P(
+            "Análisis de dispensación 2020 - 2021",
+            style={
+                "textAlign": "center",
+                "color": "#666",
+                "marginBottom": "25px"
+            }
+        ),
 
-dcc.Graph(
-    id="grafico-entrega",
-    figure=fig_entrega
-)
+        # INDICADORES
+        html.Div([
 
-])
+            html.Div([
+                html.H4("Personas con dispensaciones"),
+                html.H2(
+                    f"{personas:,}",
+                    id="indicador-personas"
+                )
+            ], style={
+                "flex": "1",
+                "padding": "20px",
+                "margin": "5px",
+                "textAlign": "center",
+                "backgroundColor": "#f4f6f8",
+                "borderRadius": "10px"
+            }),
+
+            html.Div([
+                html.H4("Fórmulas distintas"),
+                html.H2(
+                    f"{formulas:,}",
+                    id="indicador-formulas"
+                )
+            ], style={
+                "flex": "1",
+                "padding": "20px",
+                "margin": "5px",
+                "textAlign": "center",
+                "backgroundColor": "#f4f6f8",
+                "borderRadius": "10px"
+            }),
+
+            html.Div([
+                html.H4("Costo promedio por fórmula"),
+                html.H2(
+                    f"${costo_promedio:,.2f}",
+                    id="indicador-costo"
+                )
+            ], style={
+                "flex": "1",
+                "padding": "20px",
+                "margin": "5px",
+                "textAlign": "center",
+                "backgroundColor": "#f4f6f8",
+                "borderRadius": "10px"
+            })
+
+        ], style={
+            "display": "flex",
+            "marginBottom": "20px"
+        }),
+
+        # GRÁFICO DE TIEMPO
+        dcc.Graph(
+            id="grafico-tiempo",
+            figure=fig_tiempo
+        ),
+
+        # FILA DE GRÁFICOS
+        html.Div([
+
+            html.Div([
+                dcc.Graph(
+                    id="grafico-top",
+                    figure=fig_top
+                )
+            ], style={
+                "width": "50%"
+            }),
+
+            html.Div([
+                dcc.Graph(
+                    id="grafico-pbs",
+                    figure=fig_pbs
+                )
+            ], style={
+                "width": "50%"
+            })
+
+        ], style={
+            "display": "flex"
+        }),
+
+        # SEGUNDA FILA
+        html.Div([
+
+            html.Div([
+                dcc.Graph(
+                    id="grafico-municipio",
+                    figure=fig_municipio
+                )
+            ], style={
+                "width": "50%"
+            }),
+
+            html.Div([
+                dcc.Graph(
+                    id="grafico-entrega",
+                    figure=fig_entrega
+                )
+            ], style={
+                "width": "50%"
+            })
+
+        ], style={
+            "display": "flex"
+        })
+
+    ], style={
+        "flex": "1",
+        "padding": "25px",
+        "boxSizing": "border-box"
+    })
+
+], style={
+    "display": "flex",
+    "fontFamily": "Arial, sans-serif"
+})
+
 conexion.close()
 # -----------------------------
 # EJECUTAR APLICACIÓN
