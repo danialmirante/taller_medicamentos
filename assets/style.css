@@ -1,0 +1,52 @@
+body {
+	font-family: Arial, sans-serif;
+	background-color: #f5f7fa;
+	margin: 0;
+	padding: 20px;
+}
+
+h1 {
+	color: #1f3c88;
+	font-size: 36px;
+	margin-bottom: 10px;
+}
+
+h3 {
+	color: #333;
+	margin-bottom: 8px;
+}
+
+hr {
+	border: 0;
+	border-top: 1px solid #ddd;
+	margin: 20px 0;
+}
+
+/* Filtros */
+.Select-control {
+	border-radius: 8px !important;
+	min-height: 45px;
+}
+
+.dash-dropdown {
+	margin-bottom: 20px;
+}
+
+/* Indicadores */
+#indicador-personas,
+#indicador-formulas,
+#indicador-costo {
+	color: #1f3c88;
+	font-size: 30px;
+	font-weight: bold;
+}
+
+/* Gráficos */
+.js-plotly-plot {
+	background-color: white;
+	border-radius: 12px;
+	padding: 10px;
+	margin-top: 20px;
+	margin-bottom: 25px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
